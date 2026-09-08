@@ -27,22 +27,22 @@
     .nav-btn:hover { background: #1f6feb; border-color: #58a6ff; }
     .nav-btn.active { background: #238636; border-color: #2ea043; color: #fff; }
 
-    /* Brújula / Símbolo de Norte Dinámico */
+    /* Brújula / Símbolo de Norte Dinámico (Escalado 2.5x) */
     .compass-card {
       position: absolute; top: 16px; right: 16px; z-index: 10;
-      width: 48px; height: 48px;
+      width: 120px; height: 120px; /* 2.5x más grande */
       background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
-      border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.18);
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
       transition: border-color 0.2s, transform 0.15s;
     }
     .compass-card:hover {
       border-color: #58a6ff;
-      transform: scale(1.06);
+      transform: scale(1.04);
     }
     .compass-svg {
-      width: 32px; height: 32px;
+      width: 80px; height: 80px; /* Aguja escalada 2.5x */
       transform-origin: 50% 50%;
       will-change: transform;
     }
@@ -86,7 +86,7 @@
     <button class="nav-btn" id="clearBtn" style="display: none;" onclick="clearMeasure()">Borrar</button>
   </div>
 
-  <!-- Brújula / Indicador de Norte -->
+  <!-- Brújula / Indicador de Norte Dinámico (2.5x) -->
   <div class="compass-card" id="compassBtn" title="Clic para orientar al Norte" onclick="orientToNorth()">
     <svg class="compass-svg" id="compassNeedle" viewBox="0 0 36 36">
       <!-- Letra N -->
@@ -125,9 +125,9 @@
 
   <script>
     // =========================================================================
-    // PARÁMETROS CONFIGURABLES
+    // PARÁMETROS CONFIGURABLES (SOLO EDITA AQUÍ EN CADA PROYECTO)
     // =========================================================================
-    const NOMBRE_OBRA    = "ZONA DE CAPTACION CAÑADA GUADALUPE";
+    const NOMBRE_OBRA    = "Zona de Contencion Tajo Guadalupe Agosto 2026";
     const CESIUM_TOKEN   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjlnWjh5WnZVbTRSZ2s5eGUiLCJqdGkiOiI0NzQyZDU1ZS1lNzcwLTQ1OTEtYmVkMS1hYWFkYzJjNTRjYzYiLCJpZCI6NDc3MzE0LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODgxOTYzMzR9.d7HeXTwGpKuVONPPBcghXZlISjckj1wtQnxBnAMTi9M";
     const ASSET_ID_MALLA = 5172832;
     // =========================================================================
@@ -186,13 +186,11 @@
     // 5. BRÚJULA DINÁMICA
     const needle = document.getElementById('compassNeedle');
 
-    // Actualiza la orientación de la aguja con cada render de la cámara
     viewer.scene.postRender.addEventListener(function() {
       const headingDeg = Cesium.Math.toDegrees(viewer.camera.heading);
       needle.style.transform = `rotate(${-headingDeg}deg)`;
     });
 
-    // Clic en la brújula: reorienta suavemente al Norte manteniendo posición y ángulo
     function orientToNorth() {
       const camera = viewer.camera;
       viewer.camera.flyTo({
@@ -218,7 +216,7 @@
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-    // 7. SISTEMA DE MEDICIÓN 3D CON DIP Y AZIMUT
+    // 7. MEDICIÓN 3D CON DIP Y AZIMUT
     let isMeasuring = false;
     let measurePoints = [];
     let measureEntities = [];
