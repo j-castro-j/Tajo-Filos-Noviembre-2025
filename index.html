@@ -27,6 +27,26 @@
     .nav-btn:hover { background: #1f6feb; border-color: #58a6ff; }
     .nav-btn.active { background: #238636; border-color: #2ea043; color: #fff; }
 
+    /* Brújula / Símbolo de Norte Dinámico */
+    .compass-card {
+      position: absolute; top: 16px; right: 16px; z-index: 10;
+      width: 48px; height: 48px;
+      background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
+      border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .compass-card:hover {
+      border-color: #58a6ff;
+      transform: scale(1.06);
+    }
+    .compass-svg {
+      width: 32px; height: 32px;
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+
     /* Coordenadas en tiempo real */
     .coords-card {
       position: absolute; bottom: 20px; left: 16px; z-index: 10;
@@ -42,17 +62,6 @@
     }
     .coords-row { display: flex; gap: 16px; }
     .coord-item span { color: #7ee787; font-weight: bold; }
-
-    /* Escala gráfica ampliada (200px) */
-    .scale-card {
-      position: absolute; bottom: 20px; right: 16px; z-index: 10;
-      background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
-      padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #f0f3f6; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .scale-line {
-      height: 6px; border: 2px solid #58a6ff; border-top: none; margin: 6px auto 2px auto;
-    }
 
     /* Panel de resultados de medición */
     .measure-panel {
@@ -77,7 +86,21 @@
     <button class="nav-btn" id="clearBtn" style="display: none;" onclick="clearMeasure()">Borrar</button>
   </div>
 
-  <!-- Panel de resultados de medición con Dip y Azimut -->
+  <!-- Brújula / Indicador de Norte -->
+  <div class="compass-card" id="compassBtn" title="Clic para orientar al Norte" onclick="orientToNorth()">
+    <svg class="compass-svg" id="compassNeedle" viewBox="0 0 36 36">
+      <!-- Letra N -->
+      <text x="18" y="5.5" font-size="6" font-weight="900" fill="#f85149" text-anchor="middle">N</text>
+      <!-- Aguja Norte (Roja) -->
+      <polygon points="18,7 22,18 18,15.5 14,18" fill="#f85149" />
+      <!-- Aguja Sur (Gris) -->
+      <polygon points="18,29 22,18 18,20.5 14,18" fill="#8b949e" />
+      <!-- Pivote central -->
+      <circle cx="18" cy="18" r="2.5" fill="#f0f3f6" />
+    </svg>
+  </div>
+
+  <!-- Panel de resultados de medición -->
   <div class="measure-panel" id="measurePanel">
     <h2>Análisis de Línea / Talud</h2>
     <div class="measure-row"><span>Distancia 3D:</span><span class="measure-val" id="mDist3D">-- m</span></div>
@@ -98,21 +121,15 @@
     </div>
   </div>
 
-  <!-- Escala gráfica -->
-  <div class="scale-card">
-    <div id="scaleText">-- m</div>
-    <div id="scaleBar" class="scale-line" style="width: 200px;"></div>
-  </div>
-
   <div id="cesiumContainer"></div>
 
   <script>
     // =========================================================================
     // PARÁMETROS CONFIGURABLES
     // =========================================================================
-    const NOMBRE_OBRA    = "OBRA DE CONTENCION TAJO GUADALUPE";         // Nombre para pestaña y barra superior
-    const CESIUM_TOKEN   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjlnWjh5WnZVbTRSZ2s5eGUiLCJqdGkiOiI0NzQyZDU1ZS1lNzcwLTQ1OTEtYmVkMS1hYWFkYzJjNTRjYzYiLCJpZCI6NDc3MzE0LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODgxOTYzMzR9.d7HeXTwGpKuVONPPBcghXZlISjckj1wtQnxBnAMTi9M";     // Tu token de Cesium Ion
-    const ASSET_ID_MALLA = 5172832;                 // Asset ID numérico
+    const NOMBRE_OBRA    = "ZONA DE CAPTACION CAÑADA GUADALUPE";
+    const CESIUM_TOKEN   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjlnWjh5WnZVbTRSZ2s5eGUiLCJqdGkiOiI0NzQyZDU1ZS1lNzcwLTQ1OTEtYmVkMS1hYWFkYzJjNTRjYzYiLCJpZCI6NDc3MzE0LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODgxOTYzMzR9.d7HeXTwGpKuVONPPBcghXZlISjckj1wtQnxBnAMTi9M";
+    const ASSET_ID_MALLA = 5172832;
     // =========================================================================
 
     // Sincronización automática de títulos
@@ -166,7 +183,30 @@
       viewer.zoomTo(currentTileset, new Cesium.HeadingPitchRange(Cesium.Math.toRadians(45), Cesium.Math.toRadians(-35), 0));
     }
 
-    // 5. COORDENADAS BAJO EL CURSOR
+    // 5. BRÚJULA DINÁMICA
+    const needle = document.getElementById('compassNeedle');
+
+    // Actualiza la orientación de la aguja con cada render de la cámara
+    viewer.scene.postRender.addEventListener(function() {
+      const headingDeg = Cesium.Math.toDegrees(viewer.camera.heading);
+      needle.style.transform = `rotate(${-headingDeg}deg)`;
+    });
+
+    // Clic en la brújula: reorienta suavemente al Norte manteniendo posición y ángulo
+    function orientToNorth() {
+      const camera = viewer.camera;
+      viewer.camera.flyTo({
+        destination: camera.position,
+        orientation: {
+          heading: 0.0,
+          pitch: camera.pitch,
+          roll: 0.0
+        },
+        duration: 0.7
+      });
+    }
+
+    // 6. COORDENADAS BAJO EL CURSOR
     const coordsHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     coordsHandler.setInputAction(function(movement) {
       const pickedPosition = viewer.scene.pickPosition(movement.endPosition);
@@ -177,26 +217,6 @@
         document.getElementById('elev').innerText = cartographic.height.toFixed(2);
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-
-    // 6. ESCALA GRÁFICA (200px)
-    function updateScaleBar() {
-      const width = 200;
-      const center = new Cesium.Cartesian2(viewer.canvas.clientWidth / 2, viewer.canvas.clientHeight / 2);
-      const right = new Cesium.Cartesian2(center.x + width, center.y);
-
-      const p1 = viewer.scene.pickPosition(center);
-      const p2 = viewer.scene.pickPosition(right);
-
-      if (Cesium.defined(p1) && Cesium.defined(p2)) {
-        const dist = Cesium.Cartesian3.distance(p1, p2);
-        if (dist > 1000) {
-          document.getElementById('scaleText').innerText = (dist / 1000).toFixed(2) + ' km';
-        } else {
-          document.getElementById('scaleText').innerText = dist.toFixed(1) + ' m';
-        }
-      }
-    }
-    viewer.camera.changed.addEventListener(updateScaleBar);
 
     // 7. SISTEMA DE MEDICIÓN 3D CON DIP Y AZIMUT
     let isMeasuring = false;
@@ -264,7 +284,6 @@
         const p1 = measurePoints[0];
         const p2 = measurePoints[1];
 
-        // Trazado de línea 3D
         const lineEntity = viewer.entities.add({
           polyline: {
             positions: [p1, p2],
@@ -276,7 +295,6 @@
         });
         measureEntities.push(lineEntity);
 
-        // Vector ENU local (East, North, Up) centrado en P1
         const enuTransform = Cesium.Transforms.eastNorthUpToFixedFrame(p1);
         const invEnuTransform = Cesium.Matrix4.inverse(enuTransform, new Cesium.Matrix4());
         const vectorCartesian = Cesium.Cartesian3.subtract(p2, p1, new Cesium.Cartesian3());
@@ -284,23 +302,18 @@
 
         const east = localVector.x;
         const north = localVector.y;
-        const up = localVector.z; // ΔZ
+        const up = localVector.z;
 
-        // Parámetros métricos
         const dist3D = Cesium.Cartesian3.distance(p1, p2);
         const distH = Math.sqrt(east * east + north * north);
         const deltaZ = up;
         const slope = distH > 0 ? (Math.abs(deltaZ) / distH) * 100 : 0;
-
-        // Inclinación / Buzamiento (Dip: 0° a 90°)
         const dip = distH > 0 ? Cesium.Math.toDegrees(Math.atan(Math.abs(deltaZ) / distH)) : (Math.abs(deltaZ) > 0 ? 90.0 : 0.0);
 
-        // Dirección / Azimut de P1 hacia P2 (0° a 360°)
         let azRad = Math.atan2(east, north);
         let azimuth = Cesium.Math.toDegrees(azRad);
         if (azimuth < 0) azimuth += 360;
 
-        // Visualización de resultados
         document.getElementById('mDist3D').innerText = dist3D.toFixed(2) + ' m';
         document.getElementById('mDistH').innerText = distH.toFixed(2) + ' m';
         document.getElementById('mDeltaZ').innerText = (deltaZ >= 0 ? '+' : '') + deltaZ.toFixed(2) + ' m';
